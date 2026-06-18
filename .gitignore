@@ -1,0 +1,10 @@
+# Dependency folders
+node_modules/
+
+# Environment variables (Secret keys)
+.env
+
+# Ide files
+.vscode/
+.idea/
+.DS_Stores
