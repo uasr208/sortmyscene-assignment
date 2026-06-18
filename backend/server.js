@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import eventRoutes from "./routes/eventRoutes.js"; // <-- Import your new route file
-
+import bookingRoutes from "./routes/bookingRoutes.js"; // <-- Import the new router
 // Load environment configurations
 dotenv.config();
 
@@ -19,6 +19,7 @@ app.use(express.json());
 
 // Mount our specialized API routes
 app.use("/api/events", eventRoutes); // <-- Connect route to the path
+app.use("/api", bookingRoutes); // <-- Connects /api/reserve and future booking endpoints
 
 // Base fallback route
 app.get("/", (req, res) => {
