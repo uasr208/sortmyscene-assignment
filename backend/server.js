@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
+import eventRoutes from "./routes/eventRoutes.js"; // <-- Import your new route file
 
 // Load environment configurations
 dotenv.config();
@@ -14,9 +15,12 @@ connectDB();
 
 // Middlewares
 app.use(cors());
-app.use(express.json()); // Allows our server to read JSON sent by the user
+app.use(express.json());
 
-// Simple Base route to check if server is running
+// Mount our specialized API routes
+app.use("/api/events", eventRoutes); // <-- Connect route to the path
+
+// Base fallback route
 app.get("/", (req, res) => {
   res.send("SortMyScene Ticketing API is running smoothly...");
 });
