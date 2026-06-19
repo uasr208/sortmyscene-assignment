@@ -15,7 +15,7 @@ app.use(express.json());
 // Dynamic Production CORS Configurations
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://sortmyscene-assignment.vercel.app", // Update this once you get your final domain from Vercel
+  "https://sortmyscene-assignment-gilt.vercel.app", // <-- UPDATED TO MATCH  ACTUAL FRONTEND
 ];
 
 app.use(
@@ -40,12 +40,10 @@ app.use("/api/bookings", bookingRoutes);
 
 // Root Healthcheck Probe Route (Helps Render verify application status)
 app.get("/", (req, res) => {
-  res
-    .status(200)
-    .json({
-      status: "online",
-      service: "SortMyScene Seating Allocation Engine Engine",
-    });
+  res.status(200).json({
+    status: "online",
+    service: "SortMyScene Seating Allocation Engine Engine",
+  });
 });
 
 // Database Connectivity Layer
