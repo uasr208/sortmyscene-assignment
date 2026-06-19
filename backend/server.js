@@ -36,7 +36,7 @@ app.use(
 
 // Route Middlewares
 app.use("/api/events", eventRoutes);
-app.use("/api/bookings", bookingRoutes);
+app.use("/api", bookingRoutes);
 
 // Root Healthcheck Probe Route (Helps Render verify application status)
 app.get("/", (req, res) => {
