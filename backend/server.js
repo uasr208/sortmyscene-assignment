@@ -1,33 +1,61 @@
 import express from "express";
-import dotenv from "dotenv";
+import mongoose from "mongoose";
 import cors from "cors";
-import connectDB from "./config/db.js";
+import dotenv from "dotenv";
 import eventRoutes from "./routes/eventRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 
-// Load environment configurations
 dotenv.config();
 
-// Initialize express app
 const app = express();
 
-// Connect to our MongoDB database
-connectDB();
-
-// Middlewares
-app.use(cors());
+// Enable json body parsing
 app.use(express.json());
 
-// Mount our specialized API routes
-app.use("/api/events", eventRoutes);
-app.use("/api", bookingRoutes);
+// Dynamic Production CORS Configurations
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://sortmyscene-assignment.vercel.app", // Update this once you get your final domain from Vercel
+];
 
-// Base fallback route
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allows server tools, curl, or direct postman queries without an explicit origin header
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg =
+          "The CORS policy for this site does not allow access from the specified Origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+  }),
+);
+
+// Route Middlewares
+app.use("/api/events", eventRoutes);
+app.use("/api/bookings", bookingRoutes);
+
+// Root Healthcheck Probe Route (Helps Render verify application status)
 app.get("/", (req, res) => {
-  res.send("SortMyScene Ticketing API is running smoothly...");
+  res
+    .status(200)
+    .json({
+      status: "online",
+      service: "SortMyScene Seating Allocation Engine Engine",
+    });
 });
 
+// Database Connectivity Layer
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Atlas Infrastructure Synced Successfully"))
+  .catch((err) => console.error("Database Connection Failure:", err));
+
+// Dynamic Port Binding for Render Cloud Environment
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(` Server is running on http://localhost:${PORT}`);
+  console.log(`Server executing operations on production port ${PORT}`);
 });

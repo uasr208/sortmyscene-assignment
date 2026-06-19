@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/config.js"; // <-- Import the custom api instance
 import { ShieldCheck, Timer, Armchair } from "lucide-react";
 
 export default function SeatSelection({
@@ -13,22 +13,18 @@ export default function SeatSelection({
   const [loading, setLoading] = useState(true);
   const [reservationMessage, setReservationMessage] = useState(null);
   const [isReserved, setIsReserved] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes tracking in seconds
+  const [timeLeft, setTimeLeft] = useState(600);
 
-  // Fetch data layers on mount
   useEffect(() => {
     const fetchSeats = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `http://localhost:5000/api/events/${event._id}`,
-        );
+        const response = await api.get(`/events/${event._id}`);
         if (response.data.success) {
-          // Captures array cleanly from bundled backend response query payload
           setSeats(response.data.data.seats || []);
         }
       } catch (err) {
-        console.error("Error synchronizing active seat elements:", err);
+        console.error(err);
         setReservationMessage({
           type: "error",
           text: "Failed to stream seat data layers from server.",
@@ -40,12 +36,9 @@ export default function SeatSelection({
     fetchSeats();
   }, [event._id]);
 
-  // Handle active countdown timer once temporary locks are confirmed
   useEffect(() => {
     if (!isReserved || timeLeft <= 0) return;
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
+    const interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(interval);
   }, [isReserved, timeLeft]);
 
@@ -57,7 +50,6 @@ export default function SeatSelection({
 
   const handleSeatClick = (seat) => {
     if (seat.status === "booked" || isReserved) return;
-
     if (selectedSeats.includes(seat.seatNumber)) {
       setSelectedSeats(selectedSeats.filter((s) => s !== seat.seatNumber));
     } else {
@@ -65,17 +57,15 @@ export default function SeatSelection({
     }
   };
 
-  // Phase A: Push temporary 10 minute holding lock to database rows
   const handleReserve = async () => {
     if (selectedSeats.length === 0) return;
     try {
       setReservationMessage(null);
-      const response = await axios.post("http://localhost:5000/api/reserve", {
+      const response = await api.post("/reserve", {
         userId: user.id,
         eventId: event._id,
         seatNumbers: selectedSeats,
       });
-
       if (response.data.success) {
         setIsReserved(true);
         setReservationMessage({ type: "success", text: response.data.message });
@@ -83,23 +73,19 @@ export default function SeatSelection({
     } catch (err) {
       setReservationMessage({
         type: "error",
-        text:
-          err.response?.data?.message ||
-          "Conflict Detected: One or more seats were locked by another session.",
+        text: err.response?.data?.message || "Conflict: Seats already taken.",
       });
     }
   };
 
-  // Phase B: Finalize checkout confirmation purchase entry passport
   const handleConfirmBooking = async () => {
     try {
       setReservationMessage(null);
-      const response = await axios.post("http://localhost:5000/api/bookings", {
+      const response = await api.post("/bookings", {
         userId: user.id,
         eventId: event._id,
         seatNumbers: selectedSeats,
       });
-
       if (response.data.success) {
         onBookingSuccess({
           event,
@@ -110,9 +96,7 @@ export default function SeatSelection({
     } catch (err) {
       setReservationMessage({
         type: "error",
-        text:
-          err.response?.data?.message ||
-          "Transaction timeout or execution fault. Retake seats.",
+        text: err.response?.data?.message || "Transaction error.",
       });
     }
   };
@@ -121,7 +105,7 @@ export default function SeatSelection({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-slate-500">
         <div className="rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent animate-spin mb-3" />
-        <p className="text-xs font-black uppercase tracking-widest animate-pulse">
+        <p className="text-xs font-black tracking-widest animate-pulse">
           Mapping Seating Matrix Layers...
         </p>
       </div>
@@ -129,61 +113,53 @@ export default function SeatSelection({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start animate-fadeIn">
-      {/* SEAT GRID CONTAINER FRAME */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
       <div className="lg:col-span-2 bg-[#111726] border border-slate-800/60 rounded-2xl p-6 flex flex-col items-center">
-        {/* Stage Curved Glow Arc */}
-        <div className="w-full max-w-md mx-auto mb-12 relative text-center">
-          <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full opacity-60 blur-[1px]" />
+        <div className="w-full max-w-md mx-auto mb-12 text-center">
+          <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full opacity-60" />
           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 block mt-2.5">
             STAGE / SCREEN AREA
           </span>
         </div>
 
-        {/* Dynamic Matrix Layout Grid rendering seats */}
         <div className="w-full max-w-md my-4">
-          {seats.length === 0 ? (
-            <div className="text-center py-8 text-xs font-bold text-slate-500 bg-[#080c14] rounded-xl border border-slate-800">
-              ⚠️ No allocation profile mapped. Run "node seed.js" inside your
-              backend directory to reset database data.
-            </div>
-          ) : (
-            <div className="grid grid-cols-8 gap-3">
-              {seats.map((seat) => {
-                const isSelected = selectedSeats.includes(seat.seatNumber);
-                const isBooked = seat.status === "booked";
-                const isTemporarilyLocked =
-                  seat.status === "reserved" && !isSelected;
+          <div className="grid grid-cols-8 gap-3">
+            {seats.map((seat) => {
+              const isSelected = selectedSeats.includes(seat.seatNumber);
+              const isBooked =
+                seat.status === "booked" ||
+                seat.status === "unavailable" ||
+                seat.status === "confirmed";
+              const isTemporarilyLocked =
+                seat.status === "reserved" && !isSelected;
 
-                return (
-                  <button
-                    key={seat._id}
-                    disabled={
-                      isBooked ||
-                      isTemporarilyLocked ||
-                      (isReserved && !isSelected)
-                    }
-                    onClick={() => handleSeatClick(seat)}
-                    className={`aspect-square rounded-lg flex flex-col items-center justify-center text-[10px] font-black tracking-tight border transition-all cursor-pointer select-none relative ${
-                      isBooked
-                        ? "bg-rose-950/20 border-rose-900/30 text-rose-800 cursor-not-allowed opacity-30"
-                        : isTemporarilyLocked
-                          ? "bg-amber-950/20 border-amber-900/30 text-amber-800 cursor-not-allowed opacity-40"
-                          : isSelected
-                            ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30 scale-105"
-                            : "bg-[#182235] border-slate-800/80 text-slate-400 hover:border-slate-600 hover:text-white"
-                    }`}
-                  >
-                    <Armchair className="w-3.5 h-3.5 mb-0.5 opacity-70" />
-                    {seat.seatNumber}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+              return (
+                <button
+                  key={seat._id}
+                  disabled={
+                    isBooked ||
+                    isTemporarilyLocked ||
+                    (isReserved && !isSelected)
+                  }
+                  onClick={() => handleSeatClick(seat)}
+                  className={`aspect-square rounded-lg flex flex-col items-center justify-center text-[10px] font-black tracking-tight border transition-all cursor-pointer select-none relative ${
+                    isBooked
+                      ? "bg-rose-950/20 border-rose-900/30 text-rose-800 cursor-not-allowed opacity-30 pointer-events-none"
+                      : isTemporarilyLocked
+                        ? "bg-amber-950/20 border-amber-900/30 text-amber-800 cursor-not-allowed opacity-40"
+                        : isSelected
+                          ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30 scale-105"
+                          : "bg-[#182235] border-slate-800/80 text-slate-400 hover:border-slate-600 hover:text-white"
+                  }`}
+                >
+                  <Armchair className="w-3.5 h-3.5 mb-0.5 opacity-70" />
+                  {seat.seatNumber}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Visual Seating Map State Legend Row */}
         <div className="flex items-center gap-6 mt-10 border-t border-slate-800/60 pt-6 text-[11px] font-black uppercase tracking-wider text-slate-400">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-[#182235] border border-slate-800" />
@@ -200,7 +176,6 @@ export default function SeatSelection({
         </div>
       </div>
 
-      {/* CHECKOUT SIDEBAR PANEL PANEL */}
       <div className="bg-[#111726] border border-slate-800/60 rounded-2xl p-5 space-y-6">
         <div>
           <h3 className="font-extrabold text-lg text-white">
@@ -209,7 +184,6 @@ export default function SeatSelection({
           <p className="text-xs text-slate-400 mt-0.5 truncate">{event.name}</p>
         </div>
 
-        {/* Selected Seat Tag Indicators Tracker Display */}
         <div className="bg-[#080c14] border border-slate-800/80 rounded-xl p-4 min-h-[72px] flex flex-wrap gap-2 items-center">
           {selectedSeats.length === 0 ? (
             <p className="text-xs font-semibold text-slate-500 w-full text-center">
@@ -227,7 +201,6 @@ export default function SeatSelection({
           )}
         </div>
 
-        {/* Ticking Countdown Holding Alert Banner Box */}
         {isReserved && (
           <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl p-3 flex items-center justify-between text-xs font-black tracking-wide animate-pulse">
             <div className="flex items-center gap-2">
@@ -240,32 +213,26 @@ export default function SeatSelection({
           </div>
         )}
 
-        {/* State Information Messages */}
         {reservationMessage && (
           <div
-            className={`p-3 rounded-xl text-xs font-bold border ${
-              reservationMessage.type === "success"
-                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                : "bg-rose-500/10 border-rose-500/20 text-pink-400"
-            }`}
+            className={`p-3 rounded-xl text-xs font-bold border ${reservationMessage.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-pink-400"}`}
           >
             {reservationMessage.text}
           </div>
         )}
 
-        {/* Dynamic Context Button Call Action */}
         {!isReserved ? (
           <button
             disabled={selectedSeats.length === 0}
             onClick={handleReserve}
-            className="w-full bg-indigo-600 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-transparent disabled:cursor-not-allowed hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-widest py-3.5 px-4 rounded-xl transition-all shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full bg-indigo-600 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-transparent disabled:cursor-not-allowed hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-widest py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>Lock Temporary Hold</span>
           </button>
         ) : (
           <button
             onClick={handleConfirmBooking}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-widest py-3.5 px-4 rounded-xl transition-all shadow-md shadow-emerald-600/10 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-widest py-3.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <ShieldCheck className="w-4 h-4" />
             <span>Confirm Booking & Pay</span>

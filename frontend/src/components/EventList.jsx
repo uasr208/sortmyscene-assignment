@@ -1,105 +1,71 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import {
-  Calendar,
-  MapPin,
-  Users,
-  ArrowRight,
-  Sparkles,
-  Tag,
-} from "lucide-react";
+import api from "../api/config.js"; // <-- Import the custom api instance
+import { Calendar, MapPin, Users, ArrowRight, AlertCircle } from "lucide-react";
 
 export default function EventList({ onSelectEvent }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [activeFilter, setActiveFilter] = useState("ALL");
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://localhost:5000/api/events");
+        // Clean dynamic routing call using your configured axios instance
+        const response = await api.get("/events");
         if (response.data.success) {
           setEvents(response.data.data);
         }
       } catch (err) {
         setError(
-          "Could not establish connection with backend system. Make sure your local Node server is running.",
+          "Connection exception. The remote application server instance is booting.",
         );
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchEvents();
   }, []);
 
-  // Filter computations
-  const categories = [
-    "All",
-    ...new Set(events.map((e) => e.category || "General")),
-  ];
+  const categories = ["ALL", "MUSIC", "COMEDY", "SPORTS", "TECH"];
   const filteredEvents =
-    activeFilter === "All"
+    activeFilter === "ALL"
       ? events
-      : events.filter((e) => e.category === activeFilter);
+      : events.filter((e) => (e.category || "").toUpperCase() === activeFilter);
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <div className="relative flex items-center justify-center">
-          <div className="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-indigo-400 opacity-75"></div>
-          <div className="relative rounded-full h-12 w-12 border-4 border-indigo-500/20 border-t-indigo-600 animate-spin"></div>
-        </div>
-        <p className="mt-4 text-slate-500 font-bold text-xs uppercase tracking-widest animate-pulse">
-          Syncing Event Feeds...
+        <div className="rounded-full h-10 w-10 border-2 border-indigo-500 border-t-transparent animate-spin" />
+        <p className="mt-4 text-xs font-bold uppercase tracking-widest text-slate-500">
+          Synchronizing Arena...
         </p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-rose-50/50 border border-rose-200 backdrop-blur-sm text-rose-900 rounded-2xl p-6 text-center max-w-xl mx-auto shadow-sm">
-        <p className="font-bold flex items-center justify-center gap-2 text-rose-700">
-          ⚠️ Connection Exception
-        </p>
-        <p className="text-xs font-medium mt-1.5 text-rose-600">{error}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      {/* Premium Typography Welcome Header Banner */}
-      <div className="border-b border-slate-200 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
-            <Sparkles className="w-3.5 h-3.5 fill-indigo-100" /> Premium
-            Curation Platform
-          </span>
-          <h1 className="text-3xl font-black text-indigo-100 tracking-tight sm:text-4xl">
-            Live Booking Arena
-          </h1>
-          <p className="text-slate-500 text-sm mt-1 max-w-xl">
-            Discover and lock verified ticket entries across elite live scenes
-            using fast, synchronized atomic reservation tunnels.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-4xl font-extrabold text-white tracking-tight">
+          Live Booking Arena
+        </h1>
+        <p className="text-slate-400 text-sm mt-2 max-w-xl font-medium">
+          Discover and lock verified ticket entries across elite live scenes.
+        </p>
       </div>
 
-      {/* Modern Filter Bubble Row */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveFilter(cat)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 select-none cursor-pointer border ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-black tracking-wider transition-all cursor-pointer border ${
               activeFilter === cat
-                ? "bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10"
-                : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20"
+                : "bg-[#121926] text-slate-400 border-slate-800/80 hover:text-slate-200 hover:border-slate-700"
             }`}
           >
             {cat}
@@ -107,99 +73,101 @@ export default function EventList({ onSelectEvent }) {
         ))}
       </div>
 
-      {/* Image-Based Premium Event Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredEvents.map((event) => {
           const eventDate = new Date(event.date);
-          const day = eventDate.getDate();
-          const month = eventDate.toLocaleDateString("en-IN", {
-            month: "short",
-          });
+          const day = String(eventDate.getDate()).padStart(2, "0");
+          const month = eventDate
+            .toLocaleDateString("en-US", { month: "short" })
+            .toUpperCase();
+          const isCapacitySpecial =
+            event.name.includes("Cyber") || event.name.includes("Echoes");
 
           return (
             <div
               key={event._id}
-              className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hover:shadow-xl hover:border-slate-300/80 hover:-translate-y-1 transition-all duration-300 flex flex-col group cursor-pointer"
+              className="bg-[#111726] rounded-2xl border border-slate-800/60 shadow-xl overflow-hidden flex flex-col group"
             >
-              {/* Image Container Frame */}
-              <div className="relative h-48 bg-slate-100 overflow-hidden">
+              <div className="relative h-52 bg-slate-900 overflow-hidden">
                 <img
-                  src={
-                    event.imageUrl ||
-                    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30"
-                  }
+                  src={event.imageUrl}
                   alt={event.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                  loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
                 />
-                {/* Gradient Shadow Overlay underneath text info layers */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#111726] via-transparent to-transparent" />
 
-                {/* Category Floating Token Tag */}
-                <span className="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1">
-                  <Tag className="w-2.5 h-2.5 text-indigo-400 fill-indigo-400/20" />
-                  {event.category || "General"}
+                <span
+                  className={`absolute top-4 left-4 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md text-white border ${
+                    (event.category || "").toUpperCase() === "TECH"
+                      ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
+                      : "bg-pink-500/20 border-pink-500/30 text-pink-400"
+                  }`}
+                >
+                  {event.category || "GENERAL"}
                 </span>
 
-                {/* Floating Date Badge Component */}
-                <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md border border-white/30 rounded-xl px-3 py-1.5 text-center text-slate-900 min-w-[50px] shadow-sm group-hover:bg-white transition-colors">
-                  <p className="text-lg font-black leading-none tracking-tight">
-                    {day}
-                  </p>
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 mt-0.5">
+                <div className="absolute bottom-4 right-4 bg-[#1b2336]/90 backdrop-blur-sm border border-slate-700/50 rounded-xl px-2.5 py-1.5 text-center text-white min-w-[46px]">
+                  <p className="text-base font-black leading-none">{day}</p>
+                  <p className="text-[9px] font-black tracking-wide text-slate-400 mt-0.5">
                     {month}
                   </p>
                 </div>
               </div>
 
-              {/* Details Content Box */}
-              <div className="p-5 flex-1 flex flex-col justify-between bg-white">
-                <div>
-                  <h3 className="font-extrabold text-lg text-slate-800 tracking-tight group-hover:text-indigo-600 transition-colors duration-150 line-clamp-2 min-h-[56px]">
+              <div className="p-5 flex-1 flex flex-col justify-between bg-[#111726]">
+                <div className="space-y-3">
+                  <h3 className="font-bold text-xl text-white tracking-tight">
                     {event.name}
                   </h3>
-
-                  {/* Property Matrix Grid */}
-                  <div className="space-y-3 mt-4 text-xs text-slate-500 border-b border-slate-100 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400 group-hover:text-indigo-500 transition-colors">
-                        <Calendar className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="font-semibold text-slate-600">
+                  <div className="space-y-2 text-xs font-semibold text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                      <span>
                         {eventDate.toLocaleDateString("en-IN", {
-                          weekday: "long",
+                          day: "2-digit",
+                          month: "short",
                           year: "numeric",
                         })}
                       </span>
                     </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400 group-hover:text-indigo-500 transition-colors">
-                        <MapPin className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="font-semibold text-slate-600 truncate max-w-[200px]">
-                        {event.venue}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{event.venue}</span>
                     </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400 group-hover:text-indigo-500 transition-colors">
-                        <Users className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="font-semibold text-slate-600">
-                        {event.totalSeats} Total Capacities
-                      </span>
+                    <div className="flex items-center gap-2">
+                      {isCapacitySpecial ? (
+                        <>
+                          <AlertCircle
+                            className={`w-3.5 h-3.5 ${event.name.includes("Echoes") ? "text-amber-500" : "text-emerald-500"}`}
+                          />
+                          <span
+                            className={
+                              event.name.includes("Echoes")
+                                ? "text-amber-500/90"
+                                : "text-emerald-500/90"
+                            }
+                          >
+                            {event.name.includes("Echoes")
+                              ? "Selling Fast"
+                              : "Limited Capacity"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Users className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{event.totalSeats} Seats Remaining</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Main Action Call Button */}
                 <button
                   onClick={() => onSelectEvent(event)}
-                  className="w-full mt-4 bg-slate-950 text-white rounded-xl py-3 px-4 text-xs font-bold tracking-wide shadow-sm hover:bg-indigo-600 hover:shadow-lg hover:shadow-indigo-600/10 transition-all duration-200 flex items-center justify-center gap-2 group/btn active:scale-[0.98]"
+                  className="w-full mt-5 bg-indigo-600 text-white rounded-xl py-3 px-4 text-xs font-black tracking-widest uppercase hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Get Tickets</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover/btn:translate-x-1" />
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
