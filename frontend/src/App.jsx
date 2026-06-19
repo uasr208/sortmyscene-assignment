@@ -1,19 +1,24 @@
 import React, { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import EventList from "./components/EventList.jsx";
+import SeatSelection from "./components/SeatSelection.jsx"; // <-- Import the Seat View
 import { Compass, Wallet, Ticket, User, Coins } from "lucide-react";
 
 function Dashboard() {
   const { user } = useAuth();
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [activeTicket, setActiveTicket] = useState(null);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0f19] text-slate-100 selection:bg-indigo-500/30">
-      {/* Top Header Bar from image */}
+      {/* Navigation Top Header Bar */}
       <header className="border-b border-slate-900/80 bg-[#0b0f19]/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div
-            onClick={() => setSelectedEvent(null)}
+            onClick={() => {
+              setSelectedEvent(null);
+              setActiveTicket(null);
+            }}
             className="flex flex-col cursor-pointer select-none"
           >
             <span className="text-sm tracking-[0.2em] font-black uppercase text-slate-200 leading-none">
@@ -24,9 +29,8 @@ function Dashboard() {
             </span>
           </div>
 
-          {/* Mock Crypto Wallet & Profile token combo from your image layout */}
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-[#121926] border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner text-xs font-bold text-slate-300">
+            <div className="flex items-center gap-2 bg-[#121926] border border-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300">
               <Coins className="w-4 h-4 text-emerald-400" />
               <span>2.45 ETH</span>
             </div>
@@ -37,42 +41,84 @@ function Dashboard() {
         </div>
       </header>
 
-      {/* Main Workspace Feed Layout */}
+      {/* Main Workspace Frame Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28">
-        {!selectedEvent ? (
-          <EventList onSelectEvent={(event) => setSelectedEvent(event)} />
-        ) : (
-          <div className="bg-[#111726] border border-slate-800/80 rounded-3xl p-6 sm:p-8 max-w-4xl mx-auto shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-            <h2 className="text-2xl font-black tracking-tight text-white">
-              Interactive Seat Matrix
+        {activeTicket ? (
+          /* SUCCESS PASS VOUCHER DISPLAY */
+          <div className="max-w-md mx-auto bg-[#111726] border border-slate-800 rounded-3xl p-6 text-center shadow-2xl relative overflow-hidden animate-fadeIn border-t-4 border-emerald-500">
+            <span className="text-[40px]">🎉</span>
+            <h2 className="text-2xl font-black text-white mt-2">
+              Booking Confirmed!
             </h2>
-            <p className="text-sm text-slate-400 mt-1">
-              Live Allocation Layer for:{" "}
-              <span className="font-bold text-indigo-400">
-                {selectedEvent.name}
-              </span>
+            <p className="text-xs text-slate-400 mt-1">
+              Your entry passport code has been generated.
             </p>
 
-            <div className="h-[250px] my-6 bg-[#080c14] border border-slate-800 rounded-2xl flex items-center justify-center text-slate-500 text-sm">
-              [ Interactive Seat Selection Matrix Mounting Area ]
+            <div className="my-6 border-y border-dashed border-slate-800 py-4 space-y-3 text-left text-xs font-semibold text-slate-300">
+              <div className="flex justify-between">
+                <span>EVENT:</span>
+                <span className="text-white font-black">
+                  {activeTicket.event.name}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>PASSPORT SEATS:</span>
+                <span className="text-indigo-400 font-black">
+                  {activeTicket.seats.join(", ")}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>TX HASH SECURITY:</span>
+                <span className="font-mono text-slate-400">
+                  {activeTicket.transactionId}
+                </span>
+              </div>
             </div>
 
             <button
-              onClick={() => setSelectedEvent(null)}
-              className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl transition-all border border-slate-700 cursor-pointer"
+              onClick={() => {
+                setActiveTicket(null);
+                setSelectedEvent(null);
+              }}
+              className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black text-xs uppercase tracking-widest py-3 rounded-xl transition-all cursor-pointer"
             >
-              ← Back to Live Arena
+              Return to Live Arena
             </button>
+          </div>
+        ) : !selectedEvent ? (
+          <EventList onSelectEvent={(event) => setSelectedEvent(event)} />
+        ) : (
+          /* ACTIVE INTERACTIVE SELECTION MATRIX GRID */
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-black text-white tracking-tight">
+                Arena Allocation Layer
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Select and reserve entries for:{" "}
+                <span className="font-bold text-indigo-400">
+                  {selectedEvent.name}
+                </span>
+              </p>
+            </div>
+            <SeatSelection
+              event={selectedEvent}
+              user={user}
+              onBookingSuccess={(ticketInfo) => setActiveTicket(ticketInfo)}
+              onCancel={() => setSelectedEvent(null)}
+            />
           </div>
         )}
       </main>
 
-      {/* Bottom Floating Premium Navigation Dock from your image */}
+      {/* Footer Navigation Dock */}
       <footer className="fixed bottom-0 left-0 right-0 z-50 bg-[#090d16]/90 backdrop-blur-md border-t border-slate-900 px-4 py-2.5 flex justify-center shadow-[0_-10px_25px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-between max-w-md w-full gap-2">
           <button
-            onClick={() => setSelectedEvent(null)}
+            onClick={() => {
+              setSelectedEvent(null);
+              setActiveTicket(null);
+            }}
             className="flex flex-col items-center gap-1 flex-1 py-1 text-pink-500 bg-pink-500/10 rounded-xl border border-pink-500/20 transition-all cursor-pointer"
           >
             <Compass className="w-5 h-5" />
